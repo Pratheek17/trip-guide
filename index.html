@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a365d">
+<link rel="manifest" href="manifest.json">
+<title>Family Trip Guide — May 2026</title>
+<link rel="stylesheet" href="leaflet.css"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --primary:#1a365d;--accent:#c62828;--bg:#f4f4f4;--card:#fff;
+  --text:#1a1a1a;--text-light:#666;--shadow:0 2px 12px rgba(0,0,0,.08);
+  --radius:14px;--gold:#d4a017;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none}
+
+.header{background:linear-gradient(135deg,#1a365d 0%,#2d4a7a 100%);color:#fff;padding:18px 16px 12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+.header h1{font-size:20px;font-weight:700;letter-spacing:-.5px}
+.header p{font-size:12px;opacity:.8;margin-top:2px}
+.offline-badge{display:inline-block;background:#4caf50;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:8px;vertical-align:middle}
+.offline-badge.offline{background:#f44336}
+
+.city-bar{display:flex;gap:0;overflow-x:auto;background:#fff;position:sticky;top:60px;z-index:99;box-shadow:0 1px 4px rgba(0,0,0,.06);-webkit-overflow-scrolling:touch}
+.city-bar::-webkit-scrollbar{display:none}
+.city-tab{flex:1;min-width:0;padding:10px 6px;font-size:11px;font-weight:700;cursor:pointer;text-align:center;border-bottom:3px solid transparent;color:var(--text-light);transition:.2s;white-space:nowrap}
+.city-tab.active{color:var(--primary);border-bottom-color:var(--primary);background:#f0f4ff}
+.city-tab .city-emoji{font-size:18px;display:block;margin-bottom:2px}
+.city-tab .city-dates{font-size:9px;font-weight:400;opacity:.6}
+
+.day-bar{display:flex;gap:6px;overflow-x:auto;padding:10px 16px;background:var(--bg);position:sticky;top:106px;z-index:98;-webkit-overflow-scrolling:touch}
+.day-bar::-webkit-scrollbar{display:none}
+.dtab{flex-shrink:0;padding:6px 14px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;border:2px solid #ddd;background:#fff;color:var(--text-light);transition:.2s}
+.dtab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+.city-content{display:none}
+.city-content.active{display:block}
+.day-section{display:none;padding:16px;padding-bottom:100px}
+.day-section.active{display:block}
+
+.day-header{background:linear-gradient(135deg,var(--city-color,#1a365d),var(--city-color2,#2d4a7a));color:#fff;border-radius:var(--radius);padding:18px;margin-bottom:16px}
+.day-header h2{font-size:18px;margin-bottom:4px}
+.day-header p{font-size:12px;opacity:.85}
+
+.map-container{height:200px;border-radius:var(--radius);overflow:hidden;margin-bottom:16px;box-shadow:var(--shadow)}
+
+.stop{background:var(--card);border-radius:var(--radius);margin-bottom:14px;box-shadow:var(--shadow);overflow:hidden}
+.stop-time{display:inline-block;background:var(--city-color,var(--primary));color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:0 0 8px 0}
+.stop-body{padding:14px}
+.stop-name{font-size:16px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.stop-name .icon{font-size:20px}
+.stop-desc{font-size:13px;line-height:1.6;color:#444;margin:6px 0}
+.stop-tip{background:#fff8e1;border-left:3px solid var(--gold);padding:8px 10px;border-radius:0 8px 8px 0;font-size:12px;margin:8px 0;color:#5d4e00}
+.stop-tip strong{color:var(--accent)}
+.warning{background:#ffebee;border-left:3px solid var(--accent);padding:8px 10px;border-radius:0 8px 8px 0;font-size:12px;margin:8px 0;color:#b71c1c}
+.stop-cost{font-size:12px;color:var(--text-light);margin-top:6px}
+.stop-cost strong{color:var(--text)}
+
+.photo-strip{display:flex;gap:8px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch}
+.photo-strip::-webkit-scrollbar{display:none}
+.photo-strip img{height:160px;min-width:220px;border-radius:10px;object-fit:cover;flex-shrink:0;background:#ddd}
+.photo-strip .placeholder{height:160px;min-width:220px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:600;flex-shrink:0;text-align:center;padding:14px;text-shadow:0 1px 3px rgba(0,0,0,.3)}
+
+.nav-btn{display:inline-flex;align-items:center;gap:5px;background:var(--accent);color:#fff;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;margin-top:6px;transition:.2s}
+.nav-btn:active{transform:scale(.96)}
+
+.info-section{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:14px;box-shadow:var(--shadow)}
+.info-section h3{font-size:15px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.info-item{background:var(--bg);padding:8px;border-radius:8px;font-size:12px}
+.info-item strong{display:block;font-size:11px;color:var(--text-light);margin-bottom:2px}
+.info-list{list-style:none;font-size:13px;line-height:1.9}
+.info-list li::before{content:"\2022";color:var(--accent);font-weight:700;margin-right:8px}
+
+.shopping-item{background:var(--card);border-radius:10px;padding:12px;margin-bottom:10px;box-shadow:var(--shadow)}
+.shopping-item h4{font-size:14px;margin-bottom:4px}
+.shopping-item .price{color:var(--accent);font-weight:700;font-size:13px}
+.shopping-item .where{font-size:12px;color:var(--text-light)}
+.shopping-item .notes{font-size:12px;margin-top:4px;color:#444}
+.priority-top5{border-left:3px solid var(--accent)}
+.priority-high{border-left:3px solid var(--gold)}
+
+.transport-card{background:linear-gradient(135deg,#e3f2fd,#fff);border-radius:var(--radius);padding:14px;margin-bottom:14px;box-shadow:var(--shadow);border-left:4px solid #1565c0}
+.transport-card h4{color:#1565c0;font-size:14px;margin-bottom:6px}
+.transport-card p{font-size:13px;line-height:1.5}
+
+.supermarket-card{background:var(--card);border-radius:10px;padding:10px;margin-bottom:8px;box-shadow:var(--shadow);font-size:12px}
+.supermarket-card strong{font-size:13px}
+.supermarket-card .walk{color:var(--accent);font-weight:600}
+
+.footer{text-align:center;padding:20px;font-size:11px;color:var(--text-light)}
+
+@media(prefers-color-scheme:dark){
+  :root{--bg:#121212;--card:#1e1e1e;--text:#e0e0e0;--text-light:#999;--shadow:0 2px 12px rgba(0,0,0,.3)}
+  .city-bar{background:#1a1a1a}
+  .city-tab.active{background:#1a2a40}
+  .dtab{background:#1a1a1a;border-color:#333;color:#999}
+  .stop-tip{background:#2a2400;color:#ffd54f}
+  .info-item{background:#2a2a2a}
+  .warning{background:#3e1111;color:#ef9a9a}
+  .stop-desc{color:#bbb}
+  .transport-card{background:linear-gradient(135deg,#1a2a3a,#1e1e1e)}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Family Trip Guide <span class="offline-badge" id="netBadge">online</span></h1>
+  <p>May 14-28, 2026 | Prague - Krakow - Zakopane - Gdansk - Warsaw</p>
+</div>
+
+<div class="city-bar" id="cityBar">
+  <div class="city-tab active" onclick="showCity('prague',this)"><span class="city-emoji">🏰</span>Prague<span class="city-dates">14-18 May</span></div>
+  <div class="city-tab" onclick="showCity('krakow',this)"><span class="city-emoji">🐉</span>Krakow<span class="city-dates">18-21 May</span></div>
+  <div class="city-tab" onclick="showCity('zakopane',this)"><span class="city-emoji">🏔</span>Zakopane<span class="city-dates">21-23 May</span></div>
+  <div class="city-tab" onclick="showCity('gdansk',this)"><span class="city-emoji">⚓</span>Gdansk<span class="city-dates">24-25 May</span></div>
+  <div class="city-tab" onclick="showCity('warsaw',this)"><span class="city-emoji">🧜‍♀️</span>Warsaw<span class="city-dates">26-28 May</span></div>
+</div>
+
+<!-- ====== PRAGUE ====== -->
+<div class="city-content active" id="city-prague" style="--city-color:#1a365d;--city-color2:#2d4a7a">
+<div class="day-bar">
+  <div class="dtab active" onclick="showDay('prague','p0',this)">Arrival</div>
+  <div class="dtab" onclick="showDay('prague','p1',this)">Day 1</div>
+  <div class="dtab" onclick="showDay('prague','p2',this)">Day 2</div>
+  <div class="dtab" onclick="showDay('prague','p3',this)">Day 3</div>
+  <div class="dtab" onclick="showDay('prague','p4',this)">Depart</div>
+  <div class="dtab" onclick="showDay('prague','pinfo',this)">Info</div>
+</div>
+
+<div class="day-section active" id="day-p0">
+<div class="day-header"><h2>Thu 14 May — Arrival Day</h2><p>Landing 13:00 PRG | EK139 | Settle in Old Town</p></div>
+<div class="map-container" id="map-p0"></div>
+
+<div class="stop"><div class="stop-time">13:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">✈️</span>Arrive PRG Airport</div>
+<div class="stop-desc">Bolt to Kozi 917/3 in Old Town. CZK 700-900, ~25 min. Much easier than bus+metro with luggage, toddler & seniors.</div>
+<div class="stop-tip"><strong>Tip:</strong> Install Bolt app before flight. Works in all 5 cities.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">15:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🏠</span>Check-in AirBnB</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Kozi%20917%2F3%2C%20Praha%201%2C%20Czech%20Republic" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Kozi 917/3, Praha 1</a>. Host Klara. Freshen up and rest.</div>
+<div class="stop-tip"><strong>Key:</strong> Under 5 & over 65 = FREE public transport + most attractions. Carry passport at all times.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">17:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🕰️</span>Old Town Sq & Astronomical Clock</div>
+<div class="stop-desc">2 min walk from stay. Clock chimes every hour till 21:00. Built 1410 — world's oldest working astronomical clock. Watch the 12 Apostles procession in the upper windows.</div>
+<div class="photo-strip"><img src="images/prague_astronomical_clock.jpg" alt="Astronomical Clock"><img src="images/old_town_square.jpg" alt="Old Town Square"></div>
+</div></div>
+
+<div class="stop"><div class="stop-time">19:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍽️</span>Dinner — Maitrea</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Tynska%20ulicka%206%2F1064%2C%20Prague" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Tynska ulicka 6/1064</a>. FULLY VEGETARIAN. Veg svickova, veg goulash, mushroom pierogi. CZK 250-350/pp. Reserve at maitrea.cz.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">21:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">😴</span>Sleep Early</div>
+<div class="stop-desc">Jet lag recovery. Dim lights from 20:30 for Nived.</div>
+</div></div>
+</div>
+
+<div class="day-section" id="day-p1">
+<div class="day-header"><h2>Fri 15 May — Sunrise Bridge + Petrin</h2><p>Charles Bridge dawn | Havelska Market | Petrin funicular | U Prince sunset</p></div>
+<div class="map-container" id="map-p1"></div>
+
+<div class="stop"><div class="stop-time">06:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🌅</span>Charles Bridge Sunrise</div>
+<div class="stop-desc">Empty before 8AM — magical at dawn. Walk: Stay → Old Town Sq → Charles Bridge → Kampa Island → Lennon Wall → back. 90 min. 30 baroque saint statues line the bridge, built 1357-1402.</div>
+<div class="stop-tip"><strong>Why early?</strong> By 10AM it's a tourist conveyor belt. Pre-8AM you'll have it to yourselves.</div>
+<div class="photo-strip"><img src="images/charles_bridge.jpg" alt="Charles Bridge"></div>
+</div></div>
+
+<div class="stop"><div class="stop-time">08:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">☕</span>Breakfast — Globe Cafe</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Pstrossova%206%2C%20Prague" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Pstrossova 6</a>. Eggs Benedict, omelets, pancakes. Full veg+egg English menu, kid chairs. CZK 200-300/pp.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">10:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">⛪</span>Old Town Sq + Tyn Church + Havelska Market</div>
+<div class="stop-desc">Tyn Church interior free — stunning Gothic twin spires from 1365. Havelska Market for souvenirs. CASH ONLY — best prices in Prague.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">12:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🥗</span>Lunch — Lehka Hlava (Clear Head)</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Lehka%20Hlava%2C%20Borsov%202%2F280%2C%20Prague" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Borsov 2/280</a>. Famous veg restaurant. Leek risotto, veg curry, ginger lemonade. Iconic 'starry ceiling' room.</div>
+<div class="warning"><strong>RESERVE at lehkahlava.cz</strong> — books out daily.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">14:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">💤</span>Toddler Nap</div>
+<div class="stop-desc">Back to stay. Day 1 = jet lag day. Don't skip the nap.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">16:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🚂</span>Petrin Hill — Funicular + Mirror Maze</div>
+<div class="stop-desc">Funicular from Ujezd (PID pass). Mirror Maze CZK 110 (kids love warped mirrors). Petrin Tower CZK 180 (mini Eiffel, 299 steps — skip with seniors). Beautiful hilltop gardens.</div>
+<div class="warning"><strong>Check:</strong> Funicular may be closed for renovation in 2026. Verify before going.</div>
+<div class="stop-tip"><strong>Ice cream:</strong> Angelato near Ujezd. Unique flavors: lavender, nettle, olive.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">17:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍺</span>Strahov Monastery Brewery</div>
+<div class="stop-desc">40 min beer stop. Unique St. Norbert beers — brewed since 1628. Amber & Dark Lager.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">18:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🌇</span>Dinner — U Prince Rooftop</div>
+<div class="stop-desc">Overlooking Old Town Sq at sunset. Grilled veg, goat cheese, mushroom risotto. CZK 800-1200/pp.</div>
+<div class="warning"><strong>MUST RESERVE for rooftop</strong> at theprincecollection.cz — default = basement.</div>
+</div></div>
+</div>
+
+<div class="day-section" id="day-p2">
+<div class="day-header"><h2>Sat 16 May — Castle + Vysehrad + Letna</h2><p>Prague Castle morning | Vysehrad fortress | Letna beer garden sunset</p></div>
+<div class="map-container" id="map-p2"></div>
+
+<div class="stop"><div class="stop-time">07:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍳</span>Breakfast at Stay</div>
+<div class="stop-desc">Groceries from Albert (Palladium, 5 min). Need to be at Castle by 09:30.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">08:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🚋</span>Tram 22 to Castle</div>
+<div class="stop-desc">Malostranska → 'Prazsky hrad' stop (NOT Pohorelec). 12 min, PID pass.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">09:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🏰</span>Prague Castle — Circuit A</div>
+<div class="stop-desc">World's largest ancient castle (70,000 sq m). Order: Old Royal Palace (30m) → St Vitus Cathedral (45m, 600 years to build) → St George Basilica (15m) → Golden Lane (30m, Kafka lived at #22, kids love the tiny cottages).</div>
+<div class="warning"><strong>BOOK at hrad.cz</strong> — CZK 450/adult, CZK 300 concession. Time slots in May peak.</div>
+<div class="stop-tip"><strong>Skip:</strong> Great South Tower (287 steps) — not for seniors.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">12:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🧀</span>Lunch — Lokal Dlouha</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Lokal%20Dlouha%2C%20Dlouha%2033%2C%20Prague" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Dlouha 33</a>. Smazeny syr (fried cheese) — THE Czech veg dish. Egg-coated breaded Edam with tartar. CZK 400-500/pp.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">13:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">💤</span>Toddler Nap</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">15:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🏛️</span>Vysehrad Fortress</div>
+<div class="stop-desc">10th century hilltop fortress. Panoramic Vltava views. Free grounds. Famous cemetery (Dvorak, Smetana). Less crowded than Castle. 90 min.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">17:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍺</span>Letna Park Beer Garden</div>
+<div class="stop-desc">THE local park — best panoramic view of Prague. All bridges, Castle across the river. Beer garden + playground slide for Nived. Giant Metronome. Free.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">19:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍛</span>Indian Dinner</div>
+<div class="stop-desc">MASALA or ROYAL INDIAN near Old Town. Comfort food night.</div>
+</div></div>
+</div>
+
+<div class="day-section" id="day-p3">
+<div class="day-header"><h2>Sun 17 May — Zoo + Picnic + Jewish Quarter</h2><p>Prague Zoo morning | Strelecky Island picnic | Jewish Quarter | Last evening</p></div>
+<div class="map-container" id="map-p3"></div>
+
+<div class="stop"><div class="stop-time">08:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">☕</span>Breakfast — Cafe Louvre</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Cafe%20Louvre%2C%20Narodni%2022%2C%20Prague" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Narodni 22</a>. Historic art-deco cafe — Einstein & Kafka were regulars. CZK 200-300/pp.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">10:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🦁</span>Prague Zoo + Chairlift</div>
+<div class="stop-desc">Ranked #4 globally. Indonesian Jungle, Gorillas, chairlift to upper section. 3 hrs. Stroller-friendly.</div>
+<div class="warning"><strong>BUY ONLINE at zoopraha.cz</strong> — CZK 300/adult, 200/child, free under 3.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">13:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🏝️</span>Strelecky Island Picnic</div>
+<div class="stop-desc">Beautiful Vltava island with Charles Bridge views. Grab picnic supplies from Albert. Peaceful, shaded. Free.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">17:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">✡️</span>Jewish Quarter Walk</div>
+<div class="stop-desc">Sunday exteriors: Old-New Synagogue (oldest active in Europe, 1270), Pinkas, Spanish Synagogue, Parizska Street. 90 min.</div>
+<div class="photo-strip"><img src="images/josefov.jpg" alt="Jewish Quarter"></div>
+</div></div>
+
+<div class="stop"><div class="stop-time">18:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🥨</span>Wenceslas Sq + Trdelnik</div>
+<div class="stop-desc">15 min walk-through. Grab trdelnik (chimney cake) from stalls.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">19:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍛</span>Dinner — Wolt to Stay</div>
+<div class="stop-desc">Order in. Pack for early train. Sleep by 20:30.</div>
+</div></div>
+</div>
+
+<div class="day-section" id="day-p4">
+<div class="day-header"><h2>Mon 18 May — Departure to Krakow</h2><p>Leo Express 08:23 | 6 hour train</p></div>
+
+<div class="transport-card">
+<h4>🚂 Prague → Krakow</h4>
+<p><strong>Leo Express LE411-PL</strong> — Praha hl.n 08:23 → Krakow Glowny 14:22 (5h 59m)<br>Carriage 4, Seats 136/137/140/141/144 — BOOKED<br>Order food via Leo Express app to seat.</p>
+</div>
+
+<div class="stop"><div class="stop-time">06:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">⏰</span>Wake & Pack</div>
+<div class="stop-desc">Leave stay by 07:30. Bolt to Praha Hlavni Nadrazi, CZK 200.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">08:23</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🚂</span>Train Departs</div>
+<div class="stop-desc">6 hour journey through Moravia into Poland.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">14:22</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🏁</span>Arrive Krakow</div>
+<div class="stop-desc">→ Continue to Krakow section for evening plan.</div>
+</div></div>
+</div>
+
+<div class="day-section" id="day-pinfo">
+<div class="day-header"><h2>Prague Practical Info</h2><p>Transport, shopping, supermarkets</p></div>
+
+<div class="info-section"><h3>🚋 Transport</h3>
+<div class="info-grid">
+<div class="info-item"><strong>Transit Pass</strong>72hr PID pass CZK 330/adult. Free &lt;15 &amp; &gt;65. Buy at PRG airport kiosk.</div>
+<div class="info-item"><strong>PID App</strong>Best for Prague transport. Real-time tracking.</div>
+<div class="info-item"><strong>Bolt/Uber</strong>CZK 100-200 per ride.</div>
+<div class="info-item"><strong>Currency</strong>CZK (Czech Koruna)</div>
+</div></div>
+
+<div class="info-section"><h3>🛒 Supermarkets near Stay</h3>
+<div class="supermarket-card"><strong>Albert (Palladium)</strong> — <span class="walk">5 min</span> | 7:00-22:00 daily</div>
+<div class="supermarket-card"><strong>Billa V Celnici</strong> — <span class="walk">7 min</span> | 7:00-23:00</div>
+</div>
+
+<div class="info-section"><h3>🛍️ Shopping</h3>
+<div class="shopping-item priority-top5"><h4>Bohemian Crystal (Moser)</h4><div class="price">CZK 1500-8000</div><div class="where"><a href="https://www.google.com/maps/search/?api=1&query=Moser%2C%20Na%20Prikope%2012%2C%20Prague" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Na Prikope 12</a></div><div class="notes">Pack carry-on. Moser = premium.</div></div>
+<div class="shopping-item priority-top5"><h4>Garnet Jewelry</h4><div class="price">CZK 2000-15000</div><div class="where">Granat Turnov, <a href="https://www.google.com/maps/search/?api=1&query=Granat%20Turnov%2C%20Dlouha%2028%2C%20Prague" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Dlouha 28</a></div><div class="notes">Unique deep-red Czech garnet. Get certificate.</div></div>
+<div class="shopping-item priority-high"><h4>Becherovka (0.5L)</h4><div class="price">CZK 350</div><div class="where">Any supermarket</div></div>
+<div class="shopping-item"><h4>Marlenka Honey Cake</h4><div class="price">CZK 280</div><div class="where">Tesco / Albert</div></div>
+</div>
+
+<div class="info-section"><h3>🍺 Must-Try Drinks</h3>
+<ul class="info-list">
+<li>Pilsner Urquell — the original pilsner</li>
+<li>Kozel Dark — rich Czech dark lager</li>
+<li>St. Norbert — Strahov Monastery exclusive</li>
+</ul></div>
+
+<div class="info-section"><h3>📱 Key Info</h3>
+<ul class="info-list">
+<li>Stay: Kozi 917/3, Host Klara +420 777 573 735</li>
+<li>Confirmation: HMTWESZSHZ</li>
+<li>Prague tourist pass — NOT worth it</li>
+<li>Carry cash for markets</li>
+</ul></div>
+</div>
+</div>
+
+<!-- ====== KRAKOW ====== -->
+<div class="city-content" id="city-krakow" style="--city-color:#1b5e20;--city-color2:#388e3c">
+<div class="day-bar">
+  <div class="dtab active" onclick="showDay('krakow','k0',this)">Arrival</div>
+  <div class="dtab" onclick="showDay('krakow','k1',this)">Day 6</div>
+  <div class="dtab" onclick="showDay('krakow','k2',this)">Day 7</div>
+  <div class="dtab" onclick="showDay('krakow','kinfo',this)">Info</div>
+</div>
+
+<div class="day-section active" id="day-k0">
+<div class="day-header"><h2>Mon 18 May — Arrive from Prague</h2><p>Train 14:22 | Main Square + Dragon + St Mary's + Pierogi feast</p></div>
+<div class="map-container" id="map-k0"></div>
+
+<div class="stop"><div class="stop-time">16:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🏛️</span>Rynek Glowny — Main Square</div>
+<div class="stop-desc">Europe's largest medieval square (since 1257). Coffee, let Nived chase pigeons. Trumpet call (hejnal) from St Mary's tower every hour — cuts off mid-note to commemorate a 13th century watchman shot by Mongol arrows.</div>
+<a class="nav-btn" href="https://maps.app.goo.gl/3rszk7SFGaQfWSRdA" target="_blank">Walking Route</a>
+</div></div>
+
+<div class="stop"><div class="stop-time">17:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🐉</span>Wawel Dragon</div>
+<div class="stop-desc">Fire-breathing dragon statue at Wawel Hill base! Breathes real fire every ~5 min. Nived will love it. Legend: slain by a clever shoemaker's apprentice.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">18:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">⛪</span>St Mary's Basilica Interior</div>
+<div class="stop-desc">PLN 25/adult. Veit Stoss wooden altar (1489) — finest Gothic altarpiece in the world, 13m high, 12 years to carve. Last entry 17:30!</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">19:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🥟</span>Dinner — Pierogarnia Krakowiacy</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Pierogarnia%20Krakowiacy%2C%20Szewska%2023%2C%20Krakow" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Szewska 23</a>. Pierogi feast! Veg: ruskie (potato/cheese), ser bialy (white cheese/eggs), kapusta z grzybami (cabbage/mushroom). 8 pierogi PLN 25-35. Kompot drink.</div>
+</div></div>
+</div>
+
+<div class="day-section" id="day-k1">
+<div class="day-header"><h2>Tue 19 May — Wieliczka + Kazimierz</h2><p>Salt Mine underground | Jewish Quarter afternoon | Klezmer dinner with music</p></div>
+<div class="map-container" id="map-k1"></div>
+
+<div class="stop"><div class="stop-time">07:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🚌</span>Minibus 304 to Wieliczka</div>
+<div class="stop-desc">From Galeria Krakowska. PLN 4.40/pp, 30 min. Or Bolt PLN 80.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">09:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">⛏️</span>Wieliczka Salt Mine</div>
+<div class="stop-desc">UNESCO since 13th century. 2.5km underground, 800 steps DOWN, lift up. 14°C — bring fleece. Chapel of St. Kinga: entire cathedral carved from salt including chandeliers. Audio guide for Nived. 2.5-3 hours.</div>
+<div class="warning"><strong>BOOKED 9AM.</strong> CASH for lower-level gift shop. Salt lamps with amethyst PLN 100-300.</div>
+<div class="stop-tip"><strong>History:</strong> Salt was worth its weight in gold. This mine funded Polish kings for centuries. Operated 1248-2007.</div>
+<div class="stop-cost"><strong>Budget:</strong> PLN 543 (family pack — BOOKED)</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">13:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍽️</span>Lunch — Pod Aniolami</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Pod%20Aniolami%2C%20Grodzka%2035%2C%20Krakow" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Grodzka 35</a>. Underground brick cellar. Veg pierogi, mushroom risotto, beetroot borsch. PLN 250-350.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">14:30</div><div class="stop-body"><div class="stop-name"><span class="icon">💤</span>Everyone Naps</div><div class="stop-desc">Cumulative tiredness day.</div></div></div>
+
+<div class="stop"><div class="stop-time">16:45</div><div class="stop-body">
+<div class="stop-name"><span class="icon">✡️</span>Kazimierz Jewish Quarter</div>
+<div class="stop-desc">Founded 1335. Before WWII, 65,000 Jews lived here. Plac Nowy (zapiekanka veg) → Tempel Synagogue → Old Synagogue → Cafe Hevre (former synagogue, PLN 20 hot chocolate). 75 min walk. Spielberg filmed Schindler's List here.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">18:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🎵</span>Dinner — Klezmer-Hois</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Klezmer%20Hois%2C%20Szeroka%206%2C%20Krakow" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Szeroka 6</a>. Live klezmer music 20:00. Veg: latkes, pierogi, blintzes, kugel. All naturally veg+egg Jewish cuisine.</div>
+<div class="warning"><strong>RESERVE</strong> at klezmer-hois.eu</div>
+</div></div>
+</div>
+
+<div class="day-section" id="day-k2">
+<div class="day-header"><h2>Wed 20 May — Wawel + Royal Way + Lake</h2><p>Charlotte breakfast | Wawel Castle | Milkbar | Zakrzowek sunset</p></div>
+<div class="map-container" id="map-k2"></div>
+
+<div class="stop"><div class="stop-time">08:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🥐</span>Breakfast — Charlotte</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Charlotte%2C%20Plac%20Szczepanski%202%2C%20Krakow" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Plac Szczepanski 2</a>. BEST Krakow breakfast. Eggs Florentine, croissants. PLN 30-50/pp. Go before 09:30.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">10:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🏰</span>Wawel Hill</div>
+<div class="stop-desc">Poland's most important site. 1000+ years as seat of kings. Cathedral + State Rooms PLN 50 combo. Skip Crown Treasury & Bell Tower with seniors. Vistula views.</div>
+<div class="stop-tip"><strong>Book timed slots</strong> at wawel.krakow.pl D-2.</div>
+<a class="nav-btn" href="https://maps.app.goo.gl/V1hCM8coyMTMvWev8" target="_blank">Route</a>
+</div></div>
+
+<div class="stop"><div class="stop-time">11:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🚢</span>Vistula River Cruise</div>
+<div class="stop-desc">Boats from below Wawel. ~1hr, PLN 60-80/adult. Relaxing, toddler-friendly.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">13:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍲</span>Lunch — Milkbar Tomasza</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Milkbar%20Tomasza%2C%20Sw%20Tomasza%2024%2C%20Krakow" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Sw. Tomasza 24</a>. BAR MLECZNY — communist-era veg cafeteria. Cabbage soup, pierogi, nalesniki, kompot. PLN 25-40/pp. Cheapest meal of trip! 60% naturally veg.</div>
+<div class="stop-tip"><strong>Cultural:</strong> Subsidized by Communists, survived because locals love them. Authentic Polish.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">16:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🚶</span>Royal Way Walk</div>
+<div class="stop-desc">Cloth Hall (take cash) → Florianska Street → Barbican (PLN 16 climb) → St Florian's Gate → Stary Kleparz market (no tourists, local produce).</div>
+<a class="nav-btn" href="https://maps.app.goo.gl/7vcobxV3ziH5HtL29" target="_blank">Route</a>
+</div></div>
+
+<div class="stop"><div class="stop-time">17:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🏞️</span>Zakrzowek Lake</div>
+<div class="stop-desc">Bolt 10 min. Stunning turquoise quarry lake most tourists miss. Sunset gorgeous.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">19:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🥬</span>Dinner — Glonojad</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Glonojad%2C%20Plac%20Matejki%202%2C%20Krakow" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Plac Matejki 2</a>. FULLY VEGETARIAN. Falafel, halloumi, dal. PLN 200-300. Pack for Zakopane after.</div>
+</div></div>
+</div>
+
+<div class="day-section" id="day-kinfo">
+<div class="day-header"><h2>Krakow Practical Info</h2><p>Transport, shopping, food</p></div>
+
+<div class="info-section"><h3>🚋 Transport</h3>
+<ul class="info-list">
+<li>Don't buy pass — use Bolt for 2-3 trips</li>
+<li>Minibus 304: Krakow → Wieliczka (PLN 4.40/pp)</li>
+<li>jakdojade.pl app for transit</li>
+</ul></div>
+
+<div class="info-section"><h3>🛍️ Shopping</h3>
+<div class="shopping-item priority-top5"><h4>Salt Lamps (CASH)</h4><div class="price">PLN 30-150</div><div class="where">Wieliczka lower-level shop</div></div>
+<div class="shopping-item priority-high"><h4>Boleslawiec Ceramics</h4><div class="price">PLN 80-500</div><div class="where"><a href="https://www.google.com/maps/search/?api=1&query=Slawkowska%2014%2C%20Krakow" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Slawkowska 14</a></div></div>
+<div class="shopping-item priority-high"><h4>Vodka — Wyborowa, Chopin</h4><div class="price">PLN 80-200</div><div class="where">Sklep Polski</div><div class="notes">Wyborowa = king. Bocian = queen. Chopin Salt Caramel.</div></div>
+</div>
+
+<div class="info-section"><h3>☕ Cafes</h3>
+<ul class="info-list">
+<li>Cafe Camelot — best hot chocolate</li>
+<li>Cafe Hevre — best coffee (former synagogue)</li>
+<li>Charlotte — best breakfast</li>
+</ul></div>
+
+<div class="info-section"><h3>🛒 Supermarkets</h3>
+<div class="supermarket-card"><strong>Carrefour (Galeria Krakowska)</strong> — <span class="walk">12 min</span> | closed Sun</div>
+<div class="supermarket-card"><strong>Biedronka (Galeria)</strong> — <span class="walk">12 min</span> | 6:15-22:00</div>
+</div>
+</div>
+</div>
+
+<!-- ====== ZAKOPANE ====== -->
+<div class="city-content" id="city-zakopane" style="--city-color:#4e342e;--city-color2:#6d4c41">
+<div class="day-bar">
+  <div class="dtab active" onclick="showDay('zakopane','z0',this)">Day 8</div>
+  <div class="dtab" onclick="showDay('zakopane','z1',this)">Day 9</div>
+  <div class="dtab" onclick="showDay('zakopane','z2',this)">Day 10</div>
+  <div class="dtab" onclick="showDay('zakopane','zinfo',this)">Info</div>
+</div>
+
+<div class="day-section active" id="day-z0">
+<div class="day-header"><h2>Thu 21 May — Krakow to Zakopane</h2><p>Transfer | Krupowki Street | Gubalowka funicular | Bakowo dinner</p></div>
+<div class="map-container" id="map-z0"></div>
+
+<div class="transport-card">
+<h4>🚐 Krakow → Zakopane</h4>
+<p><strong>FlixBus CANCELLED.</strong> Private transfer: EUR 150-200, 2hr, baby seat. Book szwagropol.pl</p>
+</div>
+
+<div class="stop"><div class="stop-time">11:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🏠</span>Arrive Zakopane</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Pod%20Lipkami%2010%2C%20Zakopane%2C%20Poland" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Pod Lipkami 10</a>. Host Magda +48 608 496 931. Conf: HMJ8QFRDW9.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">12:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🧀</span>Lunch — Karczma Po Zboju</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Karczma%20Po%20Zboju%2C%20Krupowki%2028%2C%20Zakopane" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Krupowki 28</a>. Wooden highland inn. THE food: oscypek grilled with cranberry (PGI smoked sheep cheese, 500+ years tradition), placki ziemniaczane, pierogi. PLN 250-350.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">16:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🚶</span>Krupowki Street</div>
+<div class="stop-desc">1.5 km pedestrian artery. Highlander music, oscypek vendors, wooden crafts. Cafe Piano for hot chocolate.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">17:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🚡</span>Gubalowka Funicular</div>
+<div class="stop-desc">PLN 35 return/adult, PLN 26/child. Panoramic Tatra views, gravity slide PLN 15. Sunset from top is spectacular. BOOKED.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">19:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🎶</span>Dinner — Bakowo Zohylina Wyznio</div>
+<div class="stop-desc">ICONIC. Live folk music 20:00. Kwasnica, oscypek, halusky with bryndza, blueberry pierogi. No Indian in Zakopane — cultural exception. WORTH IT.</div>
+<div class="warning"><strong>RESERVED</strong> at bakowozohylina.pl</div>
+</div></div>
+</div>
+
+<div class="day-section" id="day-z1">
+<div class="day-header"><h2>Fri 22 May — Chocholow + Thermal Baths</h2><p>UNESCO wooden village | Chocholowskie Termy pools afternoon</p></div>
+<div class="map-container" id="map-z1"></div>
+
+<div class="stop"><div class="stop-time">09:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🚐</span>Driver to Chocholow</div>
+<div class="stop-desc">PLN 200 round trip. 30 min drive.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">10:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🏘️</span>Chocholow Village</div>
+<div class="stop-desc">UNESCO highland wood architecture from 18th century on the Polish-Slovakian border. Entire town of traditional wooden buildings — unique in all of Poland. Peaceful, no crowds. 45 min walk.</div>
+<div class="stop-tip"><strong>History:</strong> Center of the 1846 Peasant Uprising. Residents scrub the 200-year-old wooden houses clean every spring.</div>
+<a class="nav-btn" href="https://maps.app.goo.gl/sKAS1adaowSQVnTb6" target="_blank">Navigate</a>
+</div></div>
+
+<div class="stop"><div class="stop-time">12:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍲</span>Lunch — Karczma Chocholowianka</div>
+<div class="stop-desc">Pierogi z bryndza (sheep cheese), pancakes, kwasnica. PLN 200-300.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">14:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">♨️</span>Chocholowskie Termy</div>
+<div class="stop-desc">30 pools indoor+outdoor, 7 slides, sauna. Natural thermal water. Kids love the slides, seniors love thermal pools. 3 hours.</div>
+<div class="warning"><strong>SWIM CAPS REQUIRED</strong> — bring from home or buy PLN 10. Will refuse entry without. BOOKED.</div>
+<div class="stop-cost"><strong>Budget:</strong> PLN 79/adult + PLN 65/child = PLN 365 family</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">19:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍽️</span>Dinner — Karczma Po Zboju (return)</div>
+<div class="stop-desc">Comfort highland food. PLN 250-350. Pack for sleeper train tomorrow.</div>
+</div></div>
+</div>
+
+<div class="day-section" id="day-z2">
+<div class="day-header"><h2>Sat 23 May — Morskie Oko + Sleeper Train</h2><p>Tatra mountain lake | Souvenir run | TLK Karpaty 21:38 to Gdansk</p></div>
+<div class="map-container" id="map-z2"></div>
+
+<div class="stop"><div class="stop-time">06:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🚕</span>Taxi to Palenica</div>
+<div class="stop-desc">Book night before. 35 min, PLN 150 round trip. Park entry PLN 10/adult.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">07:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🐴</span>Horse Wagon + Shuttle</div>
+<div class="stop-desc">CASH ONLY. PLN 80-100/adult horse. Then electric shuttle PLN 25/pp.</div>
+<div class="warning"><strong>2026 CHANGE:</strong> Horses only go 2.5km now (trail protection). Electric shuttle for remaining 6km.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">09:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🏔️</span>MORSKIE OKO — Eye of the Sea</div>
+<div class="stop-desc">1,395m altitude. Poland's most beautiful lake — turquoise water reflecting Tatra peaks. 3km loop walk (~1hr, flat, senior-friendly). THE nature highlight of the trip.</div>
+<div class="stop-tip"><strong>Legend:</strong> "Eye of the Sea" — said to connect to the ocean underground. 34.5 hectares, largest Tatra lake.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">10:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🥧</span>Szarlotka at PTTK Hut</div>
+<div class="stop-desc">THE Polish apple pie — locals hike 9km just for this. Hot chocolate PLN 15. National tradition.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">16:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🛍️</span>Last Krupowki — SOUVENIR RUN</div>
+<div class="stop-desc">Stock up! CASH = better prices. Oscypek (vacuum-packed), wool slippers, miod pitny (mead), highlander socks, ciupaga axe (CHECK-IN ONLY).</div>
+<div class="stop-cost"><strong>Budget:</strong> PLN 800-1500</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">21:38</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🌙</span>TLK Karpaty Departs</div>
+<div class="stop-desc">Sleeper to Gdansk. 10h38m, 846km. Carriage 30, Berths 11/13/15. Booking: WA83834096.</div>
+<div class="warning"><strong>GAP:</strong> Only 3 berths booked. Seniors need 2 more — verify!</div>
+</div></div>
+</div>
+
+<div class="day-section" id="day-zinfo">
+<div class="day-header"><h2>Zakopane Practical Info</h2><p>Highland culture, cheese, shopping</p></div>
+
+<div class="info-section"><h3>🧀 Shopping (THE souvenir city)</h3>
+<div class="shopping-item priority-top5"><h4>Oscypek (PGI cheese)</h4><div class="price">PLN 25-40</div><div class="where">Krupowki vendors with PGI seal</div><div class="notes">Vacuum-sealed = 4 weeks. India customs OK. Buy 4-5.</div></div>
+<div class="shopping-item priority-top5"><h4>Miod Pitny (Mead)</h4><div class="price">PLN 60-150</div><div class="where">Karczmas, Krupowki</div><div class="notes">Counts toward 2L alcohol.</div></div>
+<div class="shopping-item priority-high"><h4>Bunc / Redykolka / Golka Cheese</h4><div class="price">PLN 30-50</div><div class="where">Krupowki vendors</div></div>
+</div>
+
+<div class="info-section"><h3>🥾 Optional Hike</h3>
+<p style="font-size:13px;line-height:1.6"><strong>Strazyska Valley & Siklawica Waterfall</strong> — 3km, 23m waterfall, shelter with tea & cakes. ~40 min, suitable for children 4-5 yrs. Hidden gem.</p>
+</div>
+
+<div class="info-section"><h3>📱 Key Info</h3>
+<ul class="info-list">
+<li>Stay: <a href="https://www.google.com/maps/search/?api=1&query=Pod%20Lipkami%2010%2C%20Zakopane%2C%20Poland" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Pod Lipkami 10</a>, Magda +48 608 496 931</li>
+<li>Conf: HMJ8QFRDW9 (21-24 May)</li>
+<li>No Indian food — embrace highlander cuisine</li>
+<li>Playground: Stanislawa Staszica Street</li>
+</ul></div>
+</div>
+</div>
+
+<!-- ====== GDANSK ====== -->
+<div class="city-content" id="city-gdansk" style="--city-color:#0d47a1;--city-color2:#1565c0">
+<div class="day-bar">
+  <div class="dtab active" onclick="showDay('gdansk','g0',this)">Day 11</div>
+  <div class="dtab" onclick="showDay('gdansk','g1',this)">Day 12</div>
+  <div class="dtab" onclick="showDay('gdansk','ginfo',this)">Info</div>
+</div>
+
+<div class="day-section active" id="day-g0">
+<div class="day-header"><h2>Sun 24 May — Arrive Gdansk + Old Town</h2><p>Sleeper arrives 08:16 | Royal Way | Mariacka amber | Manekin crepes</p></div>
+<div class="map-container" id="map-g0"></div>
+
+<div class="stop"><div class="stop-time">08:16</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🚂</span>Arrive Gdansk Glowny</div>
+<div class="stop-desc">Bolt to <a href="https://www.google.com/maps/search/?api=1&query=Lakowa%2060E%2C%20Gdansk%2C%20Poland" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Lakowa 60E</a>. Host Lion +48 791 813 055. Early bag drop or lockers PLN 30. Conf: HMT4S54C9H.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">10:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🏛️</span>Gdansk Royal Way</div>
+<div class="stop-desc">Upland Gate → Golden Gate → Dluga Street → Neptune Fountain → Dlugi Targ → Green Gate. 500m of the most beautiful merchant city in northern Europe.</div>
+<div class="stop-tip"><strong>History:</strong> One of world's wealthiest cities in 16th-17th century. 90% destroyed in WWII, meticulously rebuilt. Dutch-Flemish merchant houses.</div>
+<a class="nav-btn" href="https://maps.app.goo.gl/JJuc2gBbFEwZMYaX8" target="_blank">Walking Route</a>
+</div></div>
+
+<div class="stop"><div class="stop-time">11:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">💎</span>Mariacka Street</div>
+<div class="stop-desc">Most beautiful street in Poland. Lined with amber shops. Gothic gargoyle drainpipes. Buy amber here.</div>
+<div class="stop-tip"><strong>Amber test:</strong> Real = floats in salt water, smells like pine when heated. Look for IAA certification.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">12:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🥟</span>Lunch — Pierogarnia Mandu</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Pierogarnia%20Mandu%2C%20Elzbietanska%204%2C%20Gdansk" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Elzbietanska 4</a>. 50+ pierogi varieties, 30+ vegetarian. Best in Gdansk. PLN 35-50/pp.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">17:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🏗️</span>Old Crane + Motlawa River</div>
+<div class="stop-desc">Medieval crane (1444) — largest working crane in medieval Europe. Walk to Olowianka Island for sunset over the river.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">19:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🥞</span>Dinner — Manekin</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Manekin%2C%20Dluga%2033%2C%20Gdansk" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Dluga 33</a>. Polish/French crepes. Savory cheese+spinach + sweet apple+cinnamon. PLN 25-40 each. Kid favorite! Go before 19:30 (queues).</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">20:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍺</span>Goldwasser Bar</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Goldwasser%2C%20Dlugi%20Targ%2022%2C%20Gdansk" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Dlugi Targ 22</a>. 1598 original! Goldwasser liqueur — herbal with real 22-karat gold flakes, invented here. Drinking chocolate for Nived.</div>
+</div></div>
+</div>
+
+<div class="day-section" id="day-g1">
+<div class="day-header"><h2>Mon 25 May — Sopot + Gdynia Day Trip</h2><p>SKM train | Europe's longest pier | Sopot beach | Gdynia warships</p></div>
+<div class="map-container" id="map-g1"></div>
+
+<div class="stop"><div class="stop-time">10:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🚂</span>SKM Train to Sopot</div>
+<div class="stop-desc">25 min, PLN 5.20/adult. Every 10-15 min. SKM urban train, NOT InterCity — different platform.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">10:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🏖️</span>Sopot</div>
+<div class="stop-desc">Monte Cassino Street (Monciak) — Crooked House (surreal architecture) → Europe's longest wooden pier (511m, FREE in May!) → Beach + sand dunes. Poland's premier resort since 19th century.</div>
+<a class="nav-btn" href="https://maps.app.goo.gl/qKCp17PFvxH2Lmwf9" target="_blank">Sopot Route</a>
+</div></div>
+
+<div class="stop"><div class="stop-time">13:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍕</span>Lunch — Mamma Mia Sopot</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Mamma%20Mia%2C%20Monte%20Cassino%2026%2C%20Sopot" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Monte Cassino 26</a>. Veg pizzas + pasta. PLN 50-70/pp.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">14:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍺</span>AleBrowar Sopot</div>
+<div class="stop-desc">MUST STOP. Craft beer institution. This alone justifies the Sopot trip.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">15:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">⚓</span>Gdynia Piers</div>
+<div class="stop-desc">SKM 15 min from Sopot. South Pier walk (FREE). ORP Blyskawica destroyer + Dar Pomorza tall ship (PLN 16 each, exterior free). Scenic pier walk.</div>
+<a class="nav-btn" href="https://maps.app.goo.gl/jpKsdn13N8wD75kZ6" target="_blank">Gdynia Route</a>
+</div></div>
+
+<div class="stop"><div class="stop-time">19:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍕</span>Dinner — Bracia Bryla</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Bracia%20Bryla%2C%20Mariacka%2026%2C%20Gdansk" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Mariacka 26</a>. Sourdough wood-oven pizza. PLN 50/pp.</div>
+</div></div>
+</div>
+
+<div class="day-section" id="day-ginfo">
+<div class="day-header"><h2>Gdansk Practical Info</h2><p>Amber, beer, Tricity transport</p></div>
+
+<div class="info-section"><h3>🛍️ Shopping (AMBER CAPITAL)</h3>
+<div class="shopping-item priority-top5"><h4>Amber Jewelry</h4><div class="price">PLN 100-3000</div><div class="where">Mariacka Street</div><div class="notes">Real = floats in salt water, pine smell when heated.</div></div>
+<div class="shopping-item priority-high"><h4>Goldwasser Liqueur</h4><div class="price">PLN 80-150</div><div class="where">Dlugi Targ</div><div class="notes">22-karat gold flakes. Gdansk-invented.</div></div>
+<div class="shopping-item priority-high"><h4>Amber Rosary/Mala Beads</h4><div class="price">PLN 200-800</div><div class="where">Mariacka Street</div></div>
+</div>
+
+<div class="info-section"><h3>🍺 Beer Spots</h3>
+<ul class="info-list">
+<li>PG4 Brewery, <a href="https://www.google.com/maps/search/?api=1&query=PG4%20Brewery%2C%20Mariacka%205%2C%20Gdansk" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Mariacka 5</a> — outdoor riverside</li>
+<li>Brovarnia, <a href="https://www.google.com/maps/search/?api=1&query=Brovarnia%2C%20Szafarnia%209%2C%20Gdansk" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Szafarnia 9</a> — house-brewed, riverside</li>
+<li>Stary Browar, <a href="https://www.google.com/maps/search/?api=1&query=Stary%20Browar%2C%20Wodopoj%2012%2C%20Gdansk" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Wodopoj 12</a> — industrial-chic</li>
+<li>Goldwasser, <a href="https://www.google.com/maps/search/?api=1&query=Goldwasser%2C%20Dlugi%20Targ%2022%2C%20Gdansk" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Dlugi Targ 22</a> — 1598 original</li>
+</ul></div>
+
+<div class="info-section"><h3>🛒 Supermarkets</h3>
+<div class="supermarket-card"><strong>Biedronka Lakowa</strong> — <span class="walk">1 min!</span> | 6:00-22:00</div>
+<div class="supermarket-card"><strong>Carrefour Stagiewna</strong> — <span class="walk">12 min</span> | 8:00-24:00 daily + Sun</div>
+</div>
+
+<div class="info-section"><h3>📱 Key Info</h3>
+<ul class="info-list">
+<li>Stay: <a href="https://www.google.com/maps/search/?api=1&query=Lakowa%2060E%2C%20Gdansk%2C%20Poland" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Lakowa 60E</a>, Lion +48 791 813 055, Conf: HMT4S54C9H</li>
+<li>Tricity day pass: PLN 30/adult for Sopot/Gdynia</li>
+<li>Walk everything in Gdansk Old Town</li>
+</ul></div>
+</div>
+</div>
+
+<!-- ====== WARSAW ====== -->
+<div class="city-content" id="city-warsaw" style="--city-color:#880e4f;--city-color2:#ad1457">
+<div class="day-bar">
+  <div class="dtab active" onclick="showDay('warsaw','w0',this)">Day 13</div>
+  <div class="dtab" onclick="showDay('warsaw','w1',this)">Day 14</div>
+  <div class="dtab" onclick="showDay('warsaw','w2',this)">Depart</div>
+  <div class="dtab" onclick="showDay('warsaw','winfo',this)">Info</div>
+</div>
+
+<div class="day-section active" id="day-w0">
+<div class="day-header"><h2>Tue 26 May — Via Torun to Warsaw</h2><p>Train Gdansk | Torun gingerbread stopover | Arrive Warsaw evening</p></div>
+<div class="map-container" id="map-w0"></div>
+
+<div class="transport-card">
+<h4>🚂 Gdansk → Torun → Warsaw</h4>
+<p>Gdansk → Torun: ~3hrs PKP IC | 4hr Torun stopover | Torun → Warsaw: ~2.5hrs<br><strong>GAP: Tickets NOT booked — intercity.pl</strong></p>
+</div>
+
+<div class="stop"><div class="stop-time">11:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🏛️</span>Arrive Torun</div>
+<div class="stop-desc">Luggage lockers PLN 12. Walk 15 min to Old Town. Copernicus' birthplace. UNESCO — survived WWII intact, everything ORIGINAL medieval.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">11:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🔭</span>Copernicus House + Old Town</div>
+<div class="stop-desc">Museum PLN 15/adult (kids free). Leaning Tower. Old Town Square. Cathedral. 1.5 hrs.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">13:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍪</span>Gingerbread Museum</div>
+<div class="stop-desc">PLN 28 for 1.5hr workshop — BAKE YOUR OWN gingerbread! Nived will love it. Torun gingerbread = PGI since 1380. Take home what you bake.</div>
+<div class="warning"><strong>RESERVE at muzeumpiernika.pl D-3.</strong></div>
+</div></div>
+
+<div class="stop"><div class="stop-time">15:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🛍️</span>Kopernik Factory Shop</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Kopernik%2C%20Zeglarska%2025%2C%20Torun" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Zeglarska 25</a>. Gift boxes, katarzynka hearts. PLN 15-100.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">19:09</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🏠</span>Arrive Warsaw</div>
+<div class="stop-desc">Centralna station. Stay 500m walk! <a href="https://www.google.com/maps/search/?api=1&query=Al.%20Jerozolimskie%2025%2C%20Warsaw%2C%20Poland" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Al. Jerozolimskie 25 M32</a>. Host Halina +48 601 360 669. Conf: HMM8YRCW3T.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">20:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍽️</span>Dinner</div>
+<div class="stop-desc">Bar Bambino (<a href="https://www.google.com/maps/search/?api=1&query=Bar%20Bambino%2C%20Krucza%2021%2C%20Warsaw" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Krucza 21</a>) — veg milk bar. Or Wegetarianski Bar Mleczny (<a href="https://www.google.com/maps/search/?api=1&query=Kredytowa%208%2C%20Warsaw" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Kredytowa 8</a>) if before 20:00. PLN 25-35/pp.</div>
+</div></div>
+</div>
+
+<div class="day-section" id="day-w1">
+<div class="day-header"><h2>Wed 27 May — Old Town + Lazienki</h2><p>Royal Way | Blikle donuts | Lazienki peacocks | Copernicus Centre</p></div>
+<div class="map-container" id="map-w1"></div>
+
+<div class="stop"><div class="stop-time">09:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">👑</span>Castle Square + Old Town</div>
+<div class="stop-desc">Sigismund's Column → Royal Castle exterior → Old Town Square → Warsaw Mermaid. Walk Barbican → Freta Street → Curie Museum → New Town Square.</div>
+<div class="stop-tip"><strong>History:</strong> Warsaw was 90% destroyed in WWII. Entire Old Town rebuilt from rubble using Canaletto's 18th-century paintings. UNESCO RECONSTRUCTION achievement.</div>
+<a class="nav-btn" href="https://maps.app.goo.gl/mzQyB1uxMbvREiMp8" target="_blank">Morning Route</a>
+</div></div>
+
+<div class="stop"><div class="stop-time">12:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🚶</span>Nowy Swiat — Royal Route</div>
+<div class="stop-desc">Warsaw's grand boulevard. Presidential Palace, University, Holy Cross Church (Chopin's heart is literally in a pillar here).</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">12:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍩</span>A. Blikle — JELLY DONUTS</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Blikle%2C%20Nowy%20Swiat%2035%2C%20Warsaw" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Nowy Swiat 35</a>. THE 1869 bakery. Paczek with rose jam = Warsaw institution. PLN 8 each. Eat fresh — 2 day shelf life. Pijalnia upstairs for hot chocolate.</div>
+<div class="stop-tip"><strong>MUST-EAT.</strong> 160+ year old recipe. Don't leave Warsaw without this.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">13:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍲</span>Lunch — Bar Bambino</div>
+<div class="stop-desc"><a href="https://www.google.com/maps/search/?api=1&query=Bar%20Bambino%2C%20Krucza%2021%2C%20Warsaw" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Krucza 21</a>. Communist-era milk bar. Pierogi, nalesniki, kompot. PLN 25-35/pp. Authentic.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">15:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🦚</span>Lazienki Park</div>
+<div class="stop-desc">17th-century royal park, FREE. Palace on the Water (PLN 25, kids free). Squirrels, peacocks roam free, Chopin statue. 2-3 hrs. The Versailles of Warsaw — best park for Nived on entire trip.</div>
+<a class="nav-btn" href="https://maps.app.goo.gl/wLMWXjjuWshuH1Uq9" target="_blank">Afternoon Route</a>
+</div></div>
+
+<div class="stop"><div class="stop-time">18:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🔬</span>Copernicus Science Centre</div>
+<div class="stop-desc">Hands-on interactive science. PLN 35/adult, 25/child. Kids LOVE this. Last entry 17:00.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">19:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🌿</span>UW Library Rooftop Garden</div>
+<div class="stop-desc">FREE. Sunset views over Vistula. Hidden gem. Open till 20:00.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">20:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🍽️</span>Last Dinner</div>
+<div class="stop-desc">Krowarzywa Vegan Burgers (<a href="https://www.google.com/maps/search/?api=1&query=Krowarzywa%2C%20Marszalkowska%2027%2C%20Warsaw" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Marszalkowska 27</a>) or Hala Koszyki food hall. Warsaw = best veg scene in Poland.</div>
+</div></div>
+</div>
+
+<div class="day-section" id="day-w2">
+<div class="day-header"><h2>Thu 28 May — Fly Home</h2><p>Etihad EY160 11:50 | WAW → AUH → BLR</p></div>
+
+<div class="transport-card">
+<h4>✈️ Flight Home</h4>
+<p><strong>EY160:</strong> WAW 11:50 → AUH 19:25<br>
+<strong>Layover:</strong> 2h 10m Abu Dhabi<br>
+<strong>EY232:</strong> AUH 21:35 → BLR 03:15 (29 May)<br>
+Booking: 9OERPP</p>
+</div>
+
+<div class="stop"><div class="stop-time">07:30</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🧳</span>Check Out</div>
+<div class="stop-desc">Bolt to WAW Chopin Airport. PLN 60-80, 20 min.</div>
+<div class="stop-tip"><strong>Duty free:</strong> Last chance for Wyborowa vodka, Wedel chocolate, remaining alcohol allowance.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">09:00</div><div class="stop-body">
+<div class="stop-name"><span class="icon">✈️</span>At Airport</div>
+<div class="stop-desc">Etihad Terminal A. 3 hrs early for international.</div>
+</div></div>
+
+<div class="stop"><div class="stop-time">11:50</div><div class="stop-body">
+<div class="stop-name"><span class="icon">🛫</span>EY160 Departs</div>
+<div class="stop-desc">Warsaw → Abu Dhabi → Bengaluru. Arrive BLR 03:15 on 29 May.</div>
+</div></div>
+</div>
+
+<div class="day-section" id="day-winfo">
+<div class="day-header"><h2>Warsaw Practical Info</h2><p>Chocolate, transport, shopping</p></div>
+
+<div class="info-section"><h3>🛍️ Shopping (CHOCOLATE DAY)</h3>
+<div class="shopping-item priority-top5"><h4>Wedel Chocolate Gift Packs</h4><div class="price">PLN 30-150</div><div class="where">Wedel store, <a href="https://www.google.com/maps/search/?api=1&query=Wedel%2C%20Szpitalna%208%2C%20Warsaw" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Szpitalna 8</a> (1851)</div><div class="notes">Pijalnia cafe upstairs — hot chocolate while shopping.</div></div>
+<div class="shopping-item priority-top5"><h4>Ptasie Mleczko (Bird's Milk)</h4><div class="price">PLN 15-25</div><div class="where">Wedel store / supermarket</div><div class="notes">Iconic marshmallow-in-chocolate.</div></div>
+<div class="shopping-item priority-high"><h4>Kasztanki + Tiki Taki</h4><div class="price">PLN 12-30</div><div class="where">Any supermarket</div></div>
+<div class="shopping-item priority-high"><h4>Prince Polo (THIN)</h4><div class="price">PLN 4-8</div><div class="where">Any supermarket</div><div class="notes">1955 classic. Get the THIN one.</div></div>
+<div class="shopping-item priority-high"><h4>Jezyki (Hedgehog, salted caramel)</h4><div class="price">PLN 8-15</div><div class="where">Any supermarket</div></div>
+<div class="shopping-item priority-top5"><h4>Blikle Paczki</h4><div class="price">PLN 8 each</div><div class="where"><a href="https://www.google.com/maps/search/?api=1&query=Blikle%2C%20Nowy%20Swiat%2035%2C%20Warsaw" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Nowy Swiat 35</a></div><div class="notes">EAT IN WARSAW. 2-day shelf life. Rose jam.</div></div>
+</div>
+
+<div class="info-section"><h3>🍺 Beer</h3>
+<ul class="info-list">
+<li>Same Krafty, <a href="https://www.google.com/maps/search/?api=1&query=Same%20Krafty%2C%20Nowomiejska%2010%2C%20Warsaw" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Nowomiejska 10</a> — Day 1</li>
+<li>Cuda na Kiju, <a href="https://www.google.com/maps/search/?api=1&query=Cuda%20na%20Kiju%2C%20Nowy%20Swiat%2022%2C%20Warsaw" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Nowy Swiat 22</a> — Day 2</li>
+<li>PiwPaw, <a href="https://www.google.com/maps/search/?api=1&query=PiwPaw%2C%20Foksal%2016%2C%20Warsaw" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Foksal 16</a> — largest craft selection</li>
+</ul></div>
+
+<div class="info-section"><h3>🛒 Supermarkets</h3>
+<div class="supermarket-card"><strong>Carrefour Express <a href="https://www.google.com/maps/search/?api=1&query=Carrefour%20Express%2C%20Al.%20Jerozolimskie%2011%2C%20Warsaw" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Al. Jer. 11</a></strong> — <span class="walk">5 min</span> | 6:00-23:00, Sun 9-21</div>
+<div class="supermarket-card"><strong>Carrefour <a href="https://www.google.com/maps/search/?api=1&query=Carrefour%2C%20Marszalkowska%20138%2C%20Warsaw" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Marszalkowska 138</a></strong> — <span class="walk">10 min</span> | 24/7 incl Sunday!</div>
+</div>
+
+<div class="info-section"><h3>📱 Key Info</h3>
+<ul class="info-list">
+<li>Stay: <a href="https://www.google.com/maps/search/?api=1&query=Al.%20Jerozolimskie%2025%2C%20Warsaw%2C%20Poland" target="_blank" style="color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px">Al. Jerozolimskie 25 M32</a>, Halina +48 601 360 669</li>
+<li>Conf: HMM8YRCW3T</li>
+<li>Flight: EY160, Booking 9OERPP</li>
+<li>Currency: PLN across all Polish cities</li>
+</ul></div>
+</div>
+</div>
+
+<div class="footer">
+  Family Trip Guide — May 14-28, 2026<br>
+  Prague &bull; Krakow &bull; Zakopane &bull; Gdansk &bull; Warsaw<br>
+  Works offline
+</div>
+
+<script src="leaflet.js"></script>
+<script>
+function showCity(city, el) {
+  document.querySelectorAll('.city-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.city-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('city-' + city).classList.add('active');
+  el.classList.add('active');
+  var first = document.querySelector('#city-' + city + ' .dtab');
+  if (first) first.click();
+  window.scrollTo(0, 0);
+}
+
+function showDay(city, dayId, el) {
+  var c = document.getElementById('city-' + city);
+  c.querySelectorAll('.day-section').forEach(function(s) { s.classList.remove('active'); });
+  c.querySelectorAll('.dtab').forEach(function(t) { t.classList.remove('active'); });
+  document.getElementById('day-' + dayId).classList.add('active');
+  el.classList.add('active');
+  setTimeout(function() { initMap(dayId); }, 100);
+}
+
+var badge = document.getElementById('netBadge');
+function updateBadge() {
+  badge.textContent = navigator.onLine ? 'online' : 'offline';
+  badge.className = 'offline-badge' + (navigator.onLine ? '' : ' offline');
+}
+window.addEventListener('online', updateBadge);
+window.addEventListener('offline', updateBadge);
+updateBadge();
+
+var maps = {};
+var MC = {
+  p0:{c:[50.088,14.421],z:14,m:[[50.087,14.421,'Old Town Sq'],[50.090,14.418,'Stay']]},
+  p1:{c:[50.085,14.410],z:14,m:[[50.086,14.411,'Charles Bridge'],[50.084,14.407,'Lennon Wall'],[50.081,14.396,'Petrin Hill'],[50.085,14.389,'Strahov']]},
+  p2:{c:[50.080,14.415],z:13,m:[[50.091,14.400,'Prague Castle'],[50.063,14.418,'Vysehrad'],[50.097,14.422,'Letna Park']]},
+  p3:{c:[50.090,14.415],z:13,m:[[50.117,14.407,'Prague Zoo'],[50.083,14.412,'Strelecky Island'],[50.090,14.420,'Jewish Quarter']]},
+  k0:{c:[50.060,19.937],z:14,m:[[50.062,19.937,'Main Square'],[50.054,19.935,'Wawel Dragon'],[50.062,19.939,'St Mary\'s']]},
+  k1:{c:[50.030,19.980],z:12,m:[[49.983,20.056,'Wieliczka Mine'],[50.051,19.946,'Kazimierz']]},
+  k2:{c:[50.055,19.937],z:13,m:[[50.054,19.935,'Wawel Castle'],[50.067,19.940,'Stary Kleparz'],[50.040,19.928,'Zakrzowek Lake']]},
+  z0:{c:[49.295,19.955],z:14,m:[[49.293,19.952,'Krupowki'],[49.300,19.952,'Gubalowka']]},
+  z1:{c:[49.340,19.830],z:12,m:[[49.356,19.807,'Chocholow'],[49.357,19.823,'Termy']]},
+  z2:{c:[49.250,20.050],z:12,m:[[49.201,20.071,'Morskie Oko'],[49.270,20.109,'Palenica']]},
+  g0:{c:[54.350,18.653],z:14,m:[[54.349,18.653,'Dlugi Targ'],[54.351,18.654,'Mariacka'],[54.348,18.657,'Old Crane']]},
+  g1:{c:[54.430,18.580],z:11,m:[[54.349,18.653,'Gdansk'],[54.441,18.568,'Sopot Pier'],[54.520,18.549,'Gdynia']]},
+  w0:{c:[52.230,21.010],z:12,m:[[52.230,21.005,'Warsaw Stay']]},
+  w1:{c:[52.235,21.020],z:13,m:[[52.249,21.014,'Castle Sq'],[52.233,21.023,'Blikle'],[52.215,21.035,'Lazienki Park']]}
+};
+
+function initMap(id) {
+  var cfg = MC[id], el = document.getElementById('map-' + id);
+  if (!cfg || !el || maps[id]) return;
+  var map = L.map(el, {zoomControl:false, attributionControl:false}).setView(cfg.c, cfg.z);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:17}).addTo(map);
+  cfg.m.forEach(function(m) { L.marker([m[0],m[1]]).addTo(map).bindPopup(m[2]); });
+  maps[id] = map;
+  setTimeout(function(){map.invalidateSize();},200);
+}
+
+// Broken image handler
+document.addEventListener('error', function(e) {
+  if (e.target.tagName === 'IMG' && e.target.closest('.photo-strip')) {
+    var n = e.target.alt || 'Photo';
+    e.target.outerHTML = '<div class="placeholder" style="background:linear-gradient(135deg,#1a365d,#c62828)">' + n + '</div>';
+  }
+}, true);
+
+// Auto-select today's city
+(function() {
+  var d = new Date(), m = d.getMonth()+1, day = d.getDate(), y = d.getFullYear();
+  if (y === 2026 && m === 5) {
+    var city = day <= 17 ? 'prague' : day <= 20 ? 'krakow' : day <= 23 ? 'zakopane' : day <= 25 ? 'gdansk' : day <= 28 ? 'warsaw' : null;
+    if (city) { var t = document.querySelector('.city-tab[onclick*="'+city+'"]'); if(t) t.click(); }
+  }
+})();
+
+setTimeout(function(){initMap('p0');},300);
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
