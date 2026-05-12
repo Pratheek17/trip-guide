@@ -1,4 +1,4 @@
-const CACHE_NAME = 'trip-guide-v2';
+const CACHE_NAME = 'trip-guide-v3';
 
 self.addEventListener('install', e => {
   e.waitUntil(
